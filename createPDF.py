@@ -341,11 +341,11 @@ pdf.add_slide(
 pdf.add_slide_team_photos(
     "L'Équipe derrière ce projet",
     [
-        ("Paul Chevalier", "paul.chevalier@edu.ece.fr", "C:/Users/gabri/Downloads/deck_reakt/paul.jpg"),
-        ("Elias Moussouni", "elias.moussouni@edu.ece.fr", "C:/Users/gabri/Downloads/deck_reakt/mouss.jpg"),
-        ("Ziyad Amzil", "ziyad.amzil@edu.ece.fr", "C:/Users/gabri/Downloads/deck_reakt/ziyad.jpg"),
-        ("Malik Hassane", "malik.hassane@edu.ece.fr", "C:/Users/gabri/Downloads/deck_reakt/malik.png"),
-        ("Gabriel Guiet-Dupré", "gabriel.guietdupre@edu.ece.fr", "C:/Users/gabri/Downloads/deck_reakt/gab.jpg")
+        ("Paul Chevalier", "paul.chevalier@edu.ece.fr", "paul.jpg"),
+        ("Elias Moussouni", "elias.moussouni@edu.ece.fr", "mouss.jpg"),
+        ("Ziyad Amzil", "ziyad.amzil@edu.ece.fr", "ziyad.jpg"),
+        ("Malik Hassane", "malik.hassane@edu.ece.fr", "malik.png"),
+        ("Gabriel Guiet-Dupré", "gabriel.guietdupre@edu.ece.fr", "gab.jpg")
     ]
 )
 
