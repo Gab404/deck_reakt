@@ -51,22 +51,22 @@ class PitchDeck(FPDF):
         for line in content_lines:
             safe_line = self.safe_txt(line)
             
-            # Gestion des titres de blocs (commençant par •)
-            if line.strip().startswith("•"):
+            # Gestion des titres de blocs (commençant par -)
+            if line.strip().startswith("-"):
                 self.ln(2)
                 self.set_font('Helvetica', 'B', 16) # Même taille que slide problème
                 self.set_text_color(*self.col_green)
-                # text_clean = safe_line.replace("•", "").strip()
+                # text_clean = safe_line.replace("-", "").strip()
                 self.multi_cell(0, 8, safe_line)
                 self.set_text_color(*self.col_white)
             
-            # Gestion des sous-puces (commençant par -)
-            elif line.strip().startswith("-"):
+            # Gestion des sous-puces (commençant par >) - Modifié pour éviter conflit
+            elif line.strip().startswith(">"):
                 self.set_font('Helvetica', '', 12) # Même taille que slide problème
                 self.set_x(self.margin_left + 5)
                 self.cell(5, 8, ">", ln=0)
                 current_x = self.get_x()
-                self.multi_cell(self.page_width_mm - current_x - self.margin_right, 8, safe_line.replace("-", "").strip())
+                self.multi_cell(self.page_width_mm - current_x - self.margin_right, 8, safe_line.replace(">", "").strip())
             
             else:
                 self.set_font('Helvetica', '', 13)
@@ -138,21 +138,16 @@ class PitchDeck(FPDF):
         self.set_text_color(*self.col_white)
         for line in content_lines:
             safe_line = self.safe_txt(line)
-            if safe_line.strip().startswith("•"):
+            if safe_line.strip().startswith("-"):
                 self.set_font('Helvetica', 'B', 15)
                 self.set_text_color(*self.col_green)
                 self.set_x(self.margin_left)
                 self.cell(10, 10, ">", ln=0)
                 self.set_font('Helvetica', '', 14)
                 self.set_text_color(*self.col_white)
-                text_clean = safe_line.replace("•", "").strip()
+                text_clean = safe_line.replace("-", "").strip()
                 self.multi_cell(0, 10, text_clean)
                 self.ln(2)
-            elif safe_line.strip().startswith("-"):
-                self.set_font('Helvetica', '', 12)
-                self.set_x(25)
-                self.cell(5, 8, "-", ln=0)
-                self.multi_cell(0, 8, safe_line.replace("-", "").strip())
             else:
                 self.set_font('Helvetica', '', 14)
                 self.set_x(self.margin_left)
@@ -187,21 +182,46 @@ pdf.add_slide_problem_visual("Le Probleme : La Fermentation est une Boite Noire"
 
 # --- SLIDE SOLUTION HARMONISÉE ---
 pdf.add_slide_solution_visual("La Solution ReaKt : L'IA qui Anticipe", [
-    "• Au-dela du monitoring",
-    "- ReaKt ne se contente pas de surveiller : il anticipe.",
-    "- Un veritable pilote automatique biologique.",
-    "• Technologie de Deep Learning",
-    "- Notre reseau de neurones predit les comportements cellulaires complexes.",
-    "- Notre algorithme reagit avant meme que l'incident ne soit visible."], "example.png")
+    "- Au-dela du monitoring", # Ajout du tiret pour le titre de section
+    "ReaKt ne se contente pas de surveiller : il anticipe.",
+    "Un veritable pilote automatique biologique.",
+    "- Notre Techno",
+    "Notre reseau de neurones predit les comportements cellulaires complexes.",
+    "Notre algorithme reagit avant meme que l'incident ne soit visible."], "example.png")
 
 # Reste des slides
-pdf.add_slide("La Preuve : Un Prototype Fonctionnel", ["• Ajustement autonome des flux d'alimentation.", "• Prediction fiable des pics de biomasse."])
+
+pdf.add_slide("Vision : L'Industrie 4.0 de la Biologie", [
+    "- Notre Mission : La Standardisation",
+    "Faire passer la bioproduction du stade artisanal et incertain...",
+    "...a un standard industriel reproductible, fiable et scalable.",
+    "L'IA comme chef d'orchestre de la biologie.",
+    
+    "- Marches Cibles (Total Addressable Market)",
+    "1. Proteines Alternatives (FoodTech) :",
+    "   Cible prioritaire. Besoin critique de reduire les couts de production.",
+    "2. Pharmaceutique (Biotech) :",
+    "   Optimisation des rendements pour vaccins et anticorps monoclonaux.",
+    "3. Chimie Verte & Cosmetique :",
+    "   Production durable d'aromes, parfums et enzymes industrielles."
+])
+pdf.add_slide("Un Prototype Fonctionnel", ["- Ajustement autonome des flux d'alimentation.", "- Prediction fiable des pics de biomasse."])
 pdf.add_slide("L'Impact : Resultats de la Simulation", big_stat=[("+20%", "d'augmentation de la production sur un an."), ("0", "perte de lot detectee.")])
-pdf.add_slide("Stade de Developpement & Traction", ["• Iteration avancee : +20% production.", "• Validation experts metiers."])
-pdf.add_slide("Vision : L'Industrie 4.0 de la Biologie", ["• Transformer un art risqué en processus industriel stable."])
-pdf.add_slide("L'Equipe & Partenaires", ["• Expertise hybride Biologie & IA.", "• Soutien Hack the Fork."])
-pdf.add_slide("Prochaines Etapes", ["• Recherche de Partenaires Industriels pour pilotes en echelle reelle."])
-pdf.add_slide("Contactez-nous", ["• contact@reakt-bio.com", "• www.reakt-bio.com"])
+
+# --- MODIFICATION ICI : Prochaines étapes orientées "Preuves et Experts" ---
+pdf.add_slide("Prochaines Etapes : Du Modele a la Realite", [
+    "- Consolidation de la Preuve de Concept (PoC) :", 
+    "Transition de notre modele IA vers une validation concrete sur donnees physiques.",
+    "- Co-developpement avec Experts Metiers :",
+    "Partenariat avec des specialistes pour affiner les parametres biologiques du modele.",
+    "- Pilotes Industriels :",
+    "Mise en place de tests sur bioreacteurs reels pour valider la robustesse."
+
+])
+
+pdf.add_slide("L'Equipe & Partenaires", ["- Expertise hybride Biologie & IA.", "- Soutien Hack the Fork."])
+pdf.add_slide("Contactez-nous", ["- gabriel.guietdupre@edu.ece.fr ",
+                                 "- Mousslapuenta sur Snap pour les meufs"])
 
 pdf.output("ReaKt_Full_Deck.pdf")
-print("✅ PDF genere avec style de police harmonise.")
+print("✅ PDF genere avec les prochaines etapes mises a jour.")
