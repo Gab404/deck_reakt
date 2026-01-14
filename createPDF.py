@@ -5,22 +5,19 @@ from PIL import Image
 
 warnings.simplefilter('ignore')
 
-
 # ==================================================
-# UTILITAIRE : taille image → mm
+# UTILITAIRE : taille image
 # ==================================================
 def image_size_mm(path, dpi=300):
+    if not os.path.exists(path):
+        return (0, 0)
     with Image.open(path) as img:
         w_px, h_px = img.size
     mm_per_inch = 25.4
-    return (
-        w_px * mm_per_inch / dpi,
-        h_px * mm_per_inch / dpi
-    )
-
+    return (w_px * mm_per_inch / dpi, h_px * mm_per_inch / dpi)
 
 # ==================================================
-# CLASSE PDF
+# CLASSE PDF - PITCH DECK
 # ==================================================
 class PitchDeck(FPDF):
     def __init__(self):
@@ -28,31 +25,33 @@ class PitchDeck(FPDF):
         self.set_auto_page_break(auto=False)
 
         # --- COULEURS ---
-        self.col_bg = (10, 25, 40)
+        self.col_bg = (10, 25, 40)       # Bleu Nuit
         self.col_white = (255, 255, 255)
-        self.col_green = (0, 220, 160)
-        self.col_cyan = (0, 180, 255)
+        self.col_green = (0, 220, 160)   # Vert Tech
+        self.col_cyan = (0, 180, 255)    # Cyan Accent
+        self.col_grey = (80, 80, 80)     # Placeholders
 
         # --- TYPOGRAPHIE ---
         self.font_title = ('Helvetica', 'B', 24)
-        self.font_block_title = ('Helvetica', 'B', 16)
-        self.font_body = ('Helvetica', '', 12)
-        self.font_emphasis = ('Helvetica', 'B', 12)
-        self.line_height = 8
+        self.font_block_title = ('Helvetica', 'B', 14)
+        self.font_body = ('Helvetica', '', 11)
+        self.font_emphasis = ('Helvetica', 'B', 11)
+        self.line_height = 7
 
+        # --- MARGES ---
         self.margin_left = 15
         self.margin_right = 15
-        self.page_width_mm = 0
-        self.page_height_mm = 0
+        self.page_width_mm = 297
+        self.page_height_mm = 210
 
     def safe_txt(self, text):
         return text.encode('latin-1', 'replace').decode('latin-1')
-    
+
     def usable_width(self):
         return self.page_width_mm - self.margin_left - self.margin_right
 
     # ==================================================
-    # PAGE AVEC IMAGE DE FOND (DYNAMIQUE)
+    # PAGE ET HEADER
     # ==================================================
     def add_page_with_background(self, image_path):
         if os.path.exists(image_path):
@@ -68,278 +67,261 @@ class PitchDeck(FPDF):
             self.set_fill_color(*self.col_bg)
             self.rect(0, 0, 297, 210, 'F')
 
-    # ==================================================
-    # HEADER STANDARD (BANNER)
-    # ==================================================
     def draw_header(self, title):
         self.set_font(*self.font_title)
         self.set_text_color(*self.col_white)
-        self.set_xy(self.margin_left, 15)
+        
+        # Titre à côté du logo (X=35 pour ne pas être dessus)
+        title_x = 35 
+        title_y = 15
+        
+        self.set_xy(title_x, title_y)
         self.cell(0, 15, self.safe_txt(title), ln=True)
+        
+        # Ligne verte décorative
+        self.set_fill_color(*self.col_green)
+        self.rect(title_x, self.get_y(), 20, 1, 'F')
+
+    def draw_placeholder(self, x, y, w, h, label="Image manquante"):
+        self.set_fill_color(*self.col_grey)
+        self.set_draw_color(200, 200, 200)
+        self.rect(x, y, w, h, 'DF')
+        self.set_xy(x, y + h/2 - 5)
+        self.set_font('Helvetica', 'I', 8)
+        self.set_text_color(255, 255, 255)
+        self.cell(w, 5, self.safe_txt(label), align='C')
 
     # ==================================================
-    # SLIDES
+    # SLIDE STANDARD
     # ==================================================
     def add_slide(self, title, content_lines=[], big_stat=None):
         self.add_page_with_background("banner.png")
         self.draw_header(title)
 
         if big_stat:
-            y = 60
-            for number, text in big_stat:
-                self.set_xy(20, y)
+            y_start = 80
+            col_width = self.usable_width() / len(big_stat)
+            for i, (number, text) in enumerate(big_stat):
+                x_pos = self.margin_left + (i * col_width)
+                self.set_xy(x_pos, y_start)
                 self.set_font('Helvetica', 'B', 45)
                 self.set_text_color(*self.col_green)
-                self.cell(60, 20, number)
-
-                self.set_font('Helvetica', 'B', 16)
+                self.cell(col_width, 20, number, align='C', ln=True)
+                self.set_xy(x_pos + 5, y_start + 22)
+                self.set_font('Helvetica', 'B', 14)
                 self.set_text_color(*self.col_white)
-                self.set_xy(85, y + 5)
-                self.multi_cell(0, 10, self.safe_txt(text))
-                y += 40
+                self.multi_cell(col_width - 10, 6, self.safe_txt(text), align='C')
             return
 
         self.set_xy(self.margin_left, 50)
         for line in content_lines:
             safe = self.safe_txt(line)
             if safe.startswith("-"):
-                self.set_font(*self.font_block_title)
-                self.set_text_color(*self.col_green)
-                width = self.page_width_mm - self.margin_left - self.margin_right
-                if width < 10:  # largeur minimale
-                    width = self.usable_width()
-                self.multi_cell(width, self.line_height, safe.replace("-", "").strip())
-                self.ln(2)
-            else:
-                self.set_font(*self.font_body)
-                self.set_text_color(*self.col_white)
-                self.cell(5, self.line_height, ">", ln=0)
-                x = self.get_x()
-                width = self.page_width_mm - x - self.margin_right
-                if width < 10:  # largeur minimale
-                    width = self.usable_width()
-                self.multi_cell(width, self.line_height, safe)
-
-
-    def add_slide_solution_visual(self, title, content_lines, image_path):
-        self.add_page_with_background("banner.png")
-        self.draw_header(title)
-
-        self.set_xy(self.margin_left, 50)
-
-        for line in content_lines:
-            safe = self.safe_txt(line)
-
-            if safe.startswith("-"):
-                self.set_font(*self.font_block_title)
-                self.set_text_color(*self.col_green)
-                self.multi_cell(
-                    self.usable_width(),
-                    self.line_height,
-                    safe.replace("-", "").strip()
-                )
-                self.ln(2)
-            else:
-                self.set_font(*self.font_body)
-                self.set_text_color(*self.col_white)
-                self.cell(5, self.line_height, ">", ln=0)
-                x = self.get_x()
-
-                usable = self.page_width_mm - x - self.margin_right
-                if usable > 10:
-                    self.multi_cell(usable, self.line_height, safe)
-
-        if os.path.exists(image_path):
-            img_w = self.page_width_mm * 0.6
-            self.image(
-                image_path,
-                x=(self.page_width_mm - img_w) / 2,
-                y=110,
-                w=img_w
-            )
-
-    def add_slide_problem_visual(self, title, blocks):
-        self.add_page_with_background("banner.png")
-        self.draw_header(title)
-
-        current_y = 50
-        icon_size = 30
-
-        for icon_path, block_title, bullets in blocks:
-            # Icône
-            if os.path.exists(icon_path):
-                self.image(icon_path, x=self.margin_left, y=current_y, w=icon_size)
-            else:
-                self.set_fill_color(80, 80, 80)
-                self.rect(self.margin_left, current_y, icon_size, icon_size, 'F')
-
-            text_x = self.margin_left + icon_size + 10
-            self.set_xy(text_x, current_y)
-
-            self.set_font(*self.font_block_title)
-            self.set_text_color(*self.col_green)
-            self.cell(0, 10, self.safe_txt(block_title), ln=True)
-
-            self.set_font(*self.font_body)
-            self.set_text_color(*self.col_white)
-
-            for bullet in bullets:
-                self.set_x(text_x)
-                self.cell(5, self.line_height, ">", ln=0)
-                x = self.get_x()
-                usable = self.page_width_mm - x - self.margin_right
-                if usable > 10:
-                    self.multi_cell(usable, self.line_height, self.safe_txt(bullet))
-                self.ln(1)
-
-            current_y = max(self.get_y(), current_y + icon_size) + 10
-
-    def add_slide_prototype(self, title, content_lines, image_path):
-        self.add_page_with_background("banner.png")
-        self.draw_header(title)
-
-        self.set_xy(self.margin_left, 50)
-        for line in content_lines:
-            safe = self.safe_txt(line)
-            if safe.startswith("-"):
+                self.ln(4)
                 self.set_font(*self.font_block_title)
                 self.set_text_color(*self.col_green)
                 self.multi_cell(self.usable_width(), self.line_height, safe.replace("-", "").strip())
-                self.ln(2)
             else:
                 self.set_font(*self.font_body)
                 self.set_text_color(*self.col_white)
+                self.set_x(self.margin_left + 2)
                 self.cell(5, self.line_height, ">", ln=0)
                 x = self.get_x()
-                usable = self.page_width_mm - x - self.margin_right
-                if usable < 10:  # largeur minimale pour éviter l'erreur
-                    usable = self.usable_width()
-                self.multi_cell(usable, self.line_height, safe)
+                self.multi_cell(self.page_width_mm - x - self.margin_right, self.line_height, safe)
 
+    # ==================================================
+    # SLIDE : VISUEL LARGE
+    # ==================================================
+    def add_slide_top_down_visual(self, title, content_lines, image_path):
+        self.add_page_with_background("banner.png")
+        self.draw_header(title)
+
+        # 1. Le Texte
+        self.set_xy(self.margin_left, 50)
+        
+        for line in content_lines:
+            safe = self.safe_txt(line)
+            if safe.startswith("-"):
+                self.ln(2)
+                self.set_font(*self.font_block_title)
+                self.set_text_color(*self.col_green)
+                self.multi_cell(self.usable_width(), self.line_height, safe.replace("-", "").strip())
+            else:
+                self.set_font(*self.font_body)
+                self.set_text_color(*self.col_white)
+                self.set_x(self.margin_left + 2)
+                self.cell(5, self.line_height, ">", ln=0)
+                x = self.get_x()
+                self.multi_cell(self.page_width_mm - x - self.margin_right, self.line_height, safe)
+
+        # 2. L'Image (Largeur MAX)
+        y_current = self.get_y() + 5
+        
+        # Marge de 10mm au total (5mm gauche / 5mm droite) pour effet "plein écran" propre
+        target_w = self.page_width_mm - 10    
+        target_x = (self.page_width_mm - target_w) / 2
+        available_h = self.page_height_mm - 10 - y_current
+        
         if os.path.exists(image_path):
-            img_w = self.page_width_mm * 0.6
-            self.image(image_path, x=(self.page_width_mm - img_w) / 2, y=110, w=img_w)
+            w_orig, h_orig = image_size_mm(image_path)
+            ratio = h_orig / w_orig if w_orig > 0 else 0.5
+            display_h = target_w * ratio
+            
+            if display_h > available_h:
+                display_h = available_h
+                target_w = display_h / ratio
+                target_x = (self.page_width_mm - target_w) / 2
+            
+            self.image(image_path, x=target_x, y=y_current, w=target_w)
+        else:
+            h_ph = min(80, available_h)
+            self.draw_placeholder(target_x, y_current, target_w, h_ph, f"Visuel: {image_path}")
 
+    # ==================================================
+    # SLIDE TEAM (CORRECTION VISIBILITÉ MAIL)
+    # ==================================================
     def add_slide_team_photos(self, title, members):
         self.add_page_with_background("banner.png")
         self.draw_header(title)
 
-        y = 70
-        photo = 35
+        y_start = 80 # Position verticale des photos
+        photo_size = 35
         gap = 15
-        total = len(members) * photo + (len(members) - 1) * gap
-        x = (self.page_width_mm - total) / 2
-
-        for name, role, img in members:
-            if os.path.exists(img):
-                self.image(img, x=x, y=y, w=photo, h=photo)
-            self.set_xy(x, y + photo + 5)
+        
+        total_width = len(members) * photo_size + (len(members) - 1) * gap
+        current_x = (self.page_width_mm - total_width) / 2
+        
+        for name, email, img_path in members:
+            # 1. PHOTO
+            if os.path.exists(img_path):
+                self.image(img_path, x=current_x, y=y_start, w=photo_size, h=photo_size)
+            else:
+                self.draw_placeholder(current_x, y_start, photo_size, photo_size, "Photo")
+            
+            # 2. NOM (Sous la photo)
+            self.set_xy(current_x - 5, y_start + photo_size + 4)
             self.set_font(*self.font_emphasis)
             self.set_text_color(*self.col_green)
-            self.cell(photo, 5, self.safe_txt(name), align='C', ln=True)
+            self.cell(photo_size + 10, 5, self.safe_txt(name), align='C')
 
-            self.set_font('Helvetica', 'I', 9)
+            # 3. EMAIL (CORRECTION ICI)
+            # On calcule le centre de la photo
+            center_photo = current_x + (photo_size / 2)
+            
+            # On définit une largeur de cellule suffisante pour le mail long (55mm)
+            mail_cell_width = 55
+            
+            # On démarre la cellule pour que le texte soit centré sous la photo
+            mail_start_x = center_photo - (mail_cell_width / 2)
+            
+            self.set_xy(mail_start_x, y_start + photo_size + 10)
+            self.set_font('Helvetica', '', 7) # Police 7 pour garantir l'affichage
             self.set_text_color(*self.col_cyan)
-            self.multi_cell(photo + 10, 8, self.safe_txt(role), align='C')
-            x += photo + gap
+            self.cell(mail_cell_width, 4, self.safe_txt(email), align='C')
+            
+            # Décalage pour le prochain membre
+            current_x += photo_size + gap
 
     # ==================================================
     # COUVERTURE
     # ==================================================
     def create_cover(self):
         self.add_page_with_background("first.png")
+        
+        self.set_xy(0, 140)
+        self.set_font('Helvetica', 'B', 28)
+        self.set_text_color(*self.col_white)
+        self.cell(297, 15, self.safe_txt("ReaKt"), align='C', ln=True)
+        
+        self.set_font('Helvetica', '', 18)
+        self.set_text_color(*self.col_green)
+        self.cell(297, 12, self.safe_txt("Optimisation des Bioréacteurs par IA"), align='C', ln=True)
 
 
 # ==================================================
-# EXÉCUTION
+# SCÉNARIO
 # ==================================================
 pdf = PitchDeck()
 
+# 0. Cover
 pdf.create_cover()
 
-# Slide 1
-pdf.add_slide_solution_visual(
+# 1. Solution
+pdf.add_slide_top_down_visual(
     "La Solution ReaKt",
     [
-        "- IA prédictive",
-        "Anticipe les comportements cellulaires",
-        "- Pilotage automatique",
-        "Action avant l’incident"
+        "- IA Prédictive",
+        "Notre algorithme anticipe les comportements cellulaires avant qu'ils ne se produisent.",
+        "- Pilotage Automatique",
+        "Correction des paramètres en temps réel pour éviter tout incident."
     ],
     "example.png"
 )
 
-# Slide 2 : prototype
-pdf.add_slide_prototype(
+# 2. Prototype
+pdf.add_slide_top_down_visual(
     "La Preuve : Un Prototype Fonctionnel",
     [
-        "- Performance Technique :",
-        "Ajustement autonome des flux d'alimentation en temps réel.",
-        "Prédiction des pics de biomasse avec une marge d'erreur < 2%.",
-        "- Validation :",
-        "Modèle entraîné sur notre simulateur de fermentation.",
+        "- Performance Technique",
+        "Ajustement autonome des flux validé en laboratoire.",
+        "Prédiction des pics de biomasse (marge d'erreur < 2%).",
+        "- Validation Scientifique",
+        "Modèle validé sur simulateur propriétaire."
     ],
     "predictions.png"
 )
 
-# Slide 3
+# 3. Impact
 pdf.add_slide(
     "L'Impact : Résultats de la Simulation",
-    big_stat=[("+20%", "d'augmentation de la production sur un an."), ("0", "perte de lot.")]
+    big_stat=[
+        ("+20%", "Augmentation production"),
+        ("0", "Perte de lot (Incident évité)")
+    ]
 )
 
-# Slide 4
+# 4. Vision
 pdf.add_slide(
     "Vision : L'Industrie 4.0 de la Biologie",
     [
-        "- Notre Mission : La Standardisation",
-        "Faire passer la bioproduction du stade artisanal et incertain...",
-        "...à un standard industriel reproductible, fiable et scalable.",
-        "L'IA comme chef d'orchestre de la biologie.",
-        "- Comment y arriver ?",
-        "Proposer un logiciel affiné sur les données du client.",
-        "Une solution pérene qui analyse les données du jour quotidiennement.",
+        "- Notre Mission",
+        "Standardisation industrielle : reproductible, fiable et scalable.",
+        "- La Stratégie",
+        "Logiciel SaaS apprenant (Continuous Learning) sur les données client."
     ]
 )
 
-# Slide 5
+# 5. Business Plan
 pdf.add_slide(
-    "Business Plan : Une Strategie Data-First",
+    "Business Plan : Stratégie Data-First",
     [
-        "- Phase 1 : Acquisition & Calibration (Gratuite)",
-        "Offre : Accès gratuit pour les 2 à 3 premiers partenaires industriels.",
-        "Objectif : Valider la solution sur site et lever les barrières à l'entrée.",
-        "Data-Leverage : Récolte de données réelles pour affiner le Deep Learning.",
+        "- Phase 1 : Acquisition & Calibration (Gratuit)",
+        "Valider la solution sur site et accumuler de la donnée réelle.",
         "- Phase 2 : Transition SaaS (Abonnement)",
-        "Déploiement : Une fois la PoC validée, passage au modèle récurrent.",
-        "Tiering : Monitoring Standard (Alertes) vs Contrôle Premium (Autonome).",
-        "Revenu : Tarif annuel par bioréacteur connecté.",
-        "- Phase 3 : Success Fees (Partage de la Valeur)",
-        "Performance : Commission sur le gain net de production (ex: % sur les +20%).",
-        "Alignement : Intérêts de ReaKt et de l'industriel parfaitement liés.",
-        "- Marchés Cibles (TAM)",
-        "1. Protéines Alternatives (FoodTech) : Réduire les coûts.",
-        "2. Pharmaceutique : Optimisation des rendements.",
-        "3. Chimie Verte : Production durable."
+        "Monitoring Standard (Alertes) vs Contrôle Premium (Autonome).",
+        "- Phase 3 : Success Fees",
+        "Commission sur le gain net de production.",
+        "- Marchés Cibles",
+        "FoodTech, Pharmaceutique, Chimie Verte."
     ]
 )
 
-# Slide 6
+# 6. Roadmap
 pdf.add_slide(
-    "Prochaines Étapes : De la Simulation à la Réalité",
+    "Roadmap R&D : Améliorations Futures",
     [
-        "- Consolidation de la Preuve de Concept (PoC) :", 
-        "Explorations de différentes technologies.",
-        "- Co-développement avec Experts Métiers :",
-        "Partenariat avec des spécialistes pour affiner les paramètres biologiques.",
-        "- Pilotes Industriels :",
-        "Mise en place de tests sur bioréacteurs réels."
+        "- Optimisation Énergétique (Smart Grid)",
+        "Relier le lancement des batchs aux prix spot de l'électricité.",
+        "Simulateur déjà fonctionnel pour arbitrer coût énergie vs rendement bio.",
+        "- Maintenance Prédictive des Capteurs",
+        "Détection précoce des dérives de sondes (pH, O2) avant qu'elles ne faussent la production.",
+        "Réduction des temps d'arrêt technique.",
     ]
 )
 
-# Slide 7
+# 7. Team
 pdf.add_slide_team_photos(
-    "L'Équipe derrière ce projet",
+    "L'Équipe ReaKt",
     [
         ("Paul Chevalier", "paul.chevalier@edu.ece.fr", "paul.jpg"),
         ("Elias Moussouni", "elias.moussouni@edu.ece.fr", "mouss.jpg"),
@@ -349,5 +331,5 @@ pdf.add_slide_team_photos(
     ]
 )
 
-pdf.output("ReaKt_Full_Deck.pdf")
-print("✅ Deck généré avec images de fond !")
+pdf.output("ReaKt_Full_Deck_Final_v3.pdf")
+print("✅ PDF corrigé : Paul et son mail sont maintenant visibles !")
