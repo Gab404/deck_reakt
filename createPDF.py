@@ -137,12 +137,12 @@ class PitchDeck(FPDF):
         self.draw_header(title)
 
         # 1. Le Texte
-        self.set_xy(self.margin_left, 50)
+        self.set_xy(self.margin_left, 40)
         
         for line in content_lines:
             safe = self.safe_txt(line)
             if safe.startswith("-"):
-                self.ln(2)
+                self.ln(1) 
                 self.set_font(*self.font_block_title)
                 self.set_text_color(*self.col_green)
                 self.multi_cell(self.usable_width(), self.line_height, safe.replace("-", "").strip())
@@ -154,12 +154,14 @@ class PitchDeck(FPDF):
                 x = self.get_x()
                 self.multi_cell(self.page_width_mm - x - self.margin_right, self.line_height, safe)
 
-        # 2. L'Image (Largeur MAX)
-        y_current = self.get_y() + 5
+        # 2. L'Image (Légèrement réduite et centrée)
+        y_current = self.get_y() + 2 
         
-        # Marge de 10mm au total (5mm gauche / 5mm droite) pour effet "plein écran" propre
-        target_w = self.page_width_mm - 10    
-        target_x = (self.page_width_mm - target_w) / 2
+        # On réduit la largeur à 90% de la page pour éviter le bord à bord total
+        target_w = self.page_width_mm * 0.9 
+        target_x = (self.page_width_mm - target_w) / 2 # Recentrage automatique
+        
+        # Marge de sécurité en bas
         available_h = self.page_height_mm - 10 - y_current
         
         if os.path.exists(image_path):
@@ -167,6 +169,7 @@ class PitchDeck(FPDF):
             ratio = h_orig / w_orig if w_orig > 0 else 0.5
             display_h = target_w * ratio
             
+            # Ajustement si l'image est trop haute pour l'espace restant
             if display_h > available_h:
                 display_h = available_h
                 target_w = display_h / ratio
@@ -184,9 +187,9 @@ class PitchDeck(FPDF):
         self.add_page_with_background("banner.png")
         self.draw_header(title)
 
-        y_start = 80 # Position verticale des photos
+        y_start = 60 # Position verticale des photos
         photo_size = 35
-        gap = 15
+        gap = 10
         
         total_width = len(members) * photo_size + (len(members) - 1) * gap
         current_x = (self.page_width_mm - total_width) / 2
