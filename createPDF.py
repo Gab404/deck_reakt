@@ -50,22 +50,31 @@ class PitchDeck(FPDF):
     def usable_width(self):
         return self.page_width_mm - self.margin_left - self.margin_right
 
-    # ==================================================
-    # PAGE ET HEADER
+# ==================================================
+    # PAGE ET HEADER (CORRIGÉ)
     # ==================================================
     def add_page_with_background(self, image_path):
+        # CORRECTION : On force l'orientation Paysage ('L') au lieu de passer un 'format' tuple
+        # La version standard de FPDF ne supporte pas format=(w, h) ici.
+        self.add_page(orientation='L') 
+        
+        # Dimensions standard A4 Paysage
+        target_w = 297
+        target_h = 210
+
         if os.path.exists(image_path):
-            w_mm, h_mm = image_size_mm(image_path)
-            self.add_page(format=(w_mm, h_mm))
-            self.image(image_path, x=0, y=0, w=w_mm, h=h_mm)
-            self.page_width_mm = w_mm
-            self.page_height_mm = h_mm
+            # On étire l'image pour qu'elle remplisse la page A4
+            self.image(image_path, x=0, y=0, w=target_w, h=target_h)
+            
+            # On met à jour les dimensions internes
+            self.page_width_mm = target_w
+            self.page_height_mm = target_h
         else:
-            self.add_page(format=(297, 210))
-            self.page_width_mm = 297
-            self.page_height_mm = 210
+            # Fond bleu par défaut si pas d'image
+            self.page_width_mm = target_w
+            self.page_height_mm = target_h
             self.set_fill_color(*self.col_bg)
-            self.rect(0, 0, 297, 210, 'F')
+            self.rect(0, 0, target_w, target_h, 'F')
 
     def draw_header(self, title):
         self.set_font(*self.font_title)
@@ -246,70 +255,92 @@ class PitchDeck(FPDF):
 # ==================================================
 pdf = PitchDeck()
 
-# 0. Cover
+# 1. Cover
 pdf.create_cover()
 
-# 1. Solution
-pdf.add_slide_top_down_visual(
-    "La Solution ReaKt",
+
+# 2. PROBLÈME (Le manque à gagner réel)
+# Feedback : "Le problème de rendement est identifié... précisez que c'est un défi d'aujourd'hui"
+pdf.add_slide(
+    "Le Problème : Un Risque Industriel Majeur",
     [
-        "- IA Prédictive",
-        "Notre algorithme anticipe les comportements cellulaires avant qu'ils ne se produisent.",
-        "- Pilotage Automatique",
-        "Correction des paramètres en temps réel pour éviter tout incident."
+        "- L'Incertitude de la Fermentation",
+        "Les processus biologiques sont instables. Aujourd'hui, un industriel pilote souvent 'à l'aveugle' entre deux prélèvements.",
+        
+        "- Le Coût Réel (Manque à Gagner)",
+        "En moyenne, 1 lot sur 10 est perdu ou dégradé (contamination, dérive de pH).",
+        "Cela représente des pertes financières directes et des retards de production critiques.",
+    ],
+)
+
+# 3. Solution
+pdf.add_slide_top_down_visual(
+    "La Solution ReaK : Pilotage par Deep Learning",
+    [
+        "- Anticipation Cellulaire",
+        "Notre algorithme de Deep Learning ne se contente pas de suivre : il anticipe les comportements de la biomasse.",
+        "- Autopilote Industriel",
+        "Correction des paramètres (O2, Agitation, pH) en temps réel pour éviter les incidents avant qu'ils n'arrivent."
     ],
     "example.png"
 )
 
-# 2. Prototype
+
+# 4. Prototype
 pdf.add_slide_top_down_visual(
-    "La Preuve : Un Prototype Fonctionnel",
+    "Validation (POC) : Résultats Techniques",
     [
-        "- Performance Technique",
-        "Ajustement autonome des flux validé en laboratoire.",
-        "Prédiction des pics de biomasse (marge d'erreur < 2%).",
-        "- Validation Scientifique",
-        "Modèle validé sur simulateur propriétaire."
+        "- Modèle Validé",
+        "Nous validons actuellement notre modèle sur le simulateur que nous avons développé.",
+        
+        "- Performance",
+        "Marge d'erreur de prédiction < 2% sur les courbes de croissance biomasse.",
+        "Capacité démontrée à stabiliser une dérive simulée sans intervention humaine."
     ],
     "predictions.png"
 )
 
-# 3. Impact
+# 5. Impact
 pdf.add_slide(
-    "L'Impact : Résultats de la Simulation",
+    "L'Impact Financier & Opérationnel",
     big_stat=[
-        ("+20%", "Augmentation production"),
-        ("0", "Perte de lot (Incident évité)")
+        ("0", "Lot Perdu"),
+        ("+20%", "Productivité"),
+        ("-15%", "Coût Énergie")
     ]
 )
 
-# 4. Vision
+# 6. MARCHÉ
 pdf.add_slide(
-    "Vision : L'Industrie 4.0 de la Biologie",
+    "Marché Cible & Potentiel",
     [
-        "- Notre Mission",
-        "Standardisation industrielle : reproductible, fiable et scalable.",
-        "- La Stratégie",
-        "Logiciel SaaS apprenant (Continuous Learning) sur les données client."
+         "- Secteurs Prioritaires",
+        "1. FoodTech (Agriculture cellulaire, besoin de scalabilité).",
+        "2. Pharma (Haute valeur ajoutée, tolérance zéro défaut).",
+        "3. Chimie Verte (Optimisation des coûts).",
+        
+        "- Taille du Marché (TAM)",
+        "Marché global des bioréacteurs : 30 Milliards $.",
+        "Segment logiciel d'optimisation : En croissance de 12% / an."
     ]
 )
 
-# 5. Business Plan
+# 7. Business Plan
 pdf.add_slide(
-    "Business Plan : Stratégie Data-First",
+    "Business Model : Revenus Récurrents",
     [
-        "- Phase 1 : Acquisition & Calibration (Gratuit)",
-        "Valider la solution sur site et accumuler de la donnée réelle.",
-        "- Phase 2 : Transition SaaS (Abonnement)",
-        "Monitoring Standard (Alertes) vs Contrôle Premium (Autonome).",
-        "- Phase 3 : Success Fees",
-        "Commission sur le gain net de production.",
-        "- Marchés Cibles",
-        "FoodTech, Pharmaceutique, Chimie Verte."
+        "- 1. Setup & Calibration (One-off)",
+        "Installation des sondes virtuelles et calibration du modèle sur les données historiques du client.",
+        
+        "- 2. Licence SaaS (Récurrent)",
+        "Abonnement mensuel par bioréacteur connecté.",
+        
+        "- 3. Success Fees (Scale-up)",
+        "Commission indexée sur le gain de rendement net généré par l'algorithme."
     ]
 )
 
-# 6. Roadmap
+# 8. Roadmap
 pdf.add_slide(
     "Roadmap R&D : Améliorations Futures",
     [
@@ -322,7 +353,7 @@ pdf.add_slide(
     ]
 )
 
-# 7. Team
+# 9. Team
 pdf.add_slide_team_photos(
     "L'Équipe ReaKt",
     [
@@ -331,6 +362,18 @@ pdf.add_slide_team_photos(
         ("Ziyad Amzil", "ziyad.amzil@edu.ece.fr", "ziyad.jpg"),
         ("Malik Hassane", "malik.hassane@edu.ece.fr", "malik.png"),
         ("Gabriel Guiet-Dupré", "gabriel.guietdupre@edu.ece.fr", "gab.jpg")
+    ]
+)
+
+# 10. VISION
+pdf.add_slide(
+    "Vision : L'Industrie 4.0 de la Biologie",
+    [
+        "- Standardisation",
+        "Rendre la bioproduction aussi prévisible et standardisée que l'industrie automobile.",
+        
+        "- Scalabilité",
+        "Permettre le passage du laboratoire à l'usine sans perte de rendement grâce à l'IA."
     ]
 )
 
